@@ -9,8 +9,22 @@ import { api } from "~/utils/api";
 const Form = () => {
   const [message, setMessage] = useState("");
   const { data: session, status } = useSession();
-
-  const postMessage = api.sleepbook.postMessage.useMutation();
+  const utils = api.useContext();
+  const postMessage = api.sleepbook.postMessage.useMutation({
+    onMutate: async (newEntry) => {
+      await utils.sleepbook.getAll.cancel();
+      utils.sleepbook.getAll.setData(undefined, (prevEntries) => {
+        if (prevEntries) {
+          return [newEntry, ...prevEntries];
+        } else {
+          return [newEntry];
+        }
+      })
+    },
+    onSettled: async () => {
+      await utils.sleepbook.getAll.invalidate();
+    }
+  });
 
   if (status !== "authenticated") return null;
 
